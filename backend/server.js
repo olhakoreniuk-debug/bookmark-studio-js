@@ -113,7 +113,7 @@ export class PostgresBookmarkStore {
 
   async initialize() {
     await this.pool.query(`
-      CREATE TABLE IF NOT EXISTS bookmarks (
+      CREATE TABLE IF NOT EXISTS bookmarks_js (
         id TEXT PRIMARY KEY,
         url TEXT NOT NULL,
         title TEXT NOT NULL,
@@ -126,7 +126,7 @@ export class PostgresBookmarkStore {
       )
     `);
     await this.pool.query(
-      "ALTER TABLE bookmarks ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT ''",
+      "ALTER TABLE bookmarks_js ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT ''",
     );
   }
 
@@ -147,7 +147,7 @@ export class PostgresBookmarkStore {
 
   async list() {
     const { rows } = await this.pool.query(
-      "SELECT * FROM bookmarks ORDER BY created_at DESC",
+      "SELECT * FROM bookmarks_js ORDER BY created_at DESC",
     );
     return rows.map(PostgresBookmarkStore.#fromRow);
   }
@@ -159,7 +159,7 @@ export class PostgresBookmarkStore {
       bookmark.createdAt, bookmark.category,
     ];
     await this.pool.query(
-      `INSERT INTO bookmarks
+      `INSERT INTO bookmarks_js
         (id, url, title, description, cover, note, tags, created_at, category)
        VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9)
        ON CONFLICT (id) DO UPDATE SET
@@ -173,7 +173,7 @@ export class PostgresBookmarkStore {
   }
 
   async delete(id) {
-    const result = await this.pool.query("DELETE FROM bookmarks WHERE id = $1", [id]);
+    const result = await this.pool.query("DELETE FROM bookmarks_js WHERE id = $1", [id]);
     return result.rowCount > 0;
   }
 
