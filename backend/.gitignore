@@ -1,0 +1,7 @@
+node_modules/
+.env
+bookmarks.json
+test-bookmarks.json
+npm-debug.log*
+
+
