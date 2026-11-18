@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Bookmark Studio — a public bookmark library with owner-only editing."
+    />
+    <title>My Bookmarks — Bookmark Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css?v=20261117-2" />
+    <style>[hidden] { display: none !important; }</style>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="Bookmark Studio — home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M7 4.75A1.75 1.75 0 0 1 8.75 3h6.5A1.75 1.75 0 0 1 17 4.75V21l-5-3.25L7 21V4.75Z" /></svg>
+        </span>
+        <span>Bookmark <strong>Studio</strong></span>
+      </a>
+      <div id="google-signin"></div><button id="signout-button" type="button" hidden>Sign out</button>
+      <span class="privacy-pill">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 10V7a4.5 4.5 0 0 1 9 0v3m-10 0h11a1 1 0 0 1 1 1v9h-13v-9a1 1 0 0 1 1-1Z" /></svg>
+        Public library
+      </span>
+    </header>
+
+    <main>
+      <section class="hero" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow">Your collection</p>
+          <h1 id="page-title">My Bookmarks</h1>
+          <p class="hero-copy">Save what matters with the context you will want when you return.</p>
+        </div>
+        <button class="primary-button hero-button" type="button" data-focus-form>
+          <span aria-hidden="true">＋</span> Add a link
+        </button>
+      </section>
+
+      <section class="composer" aria-labelledby="chrome-title">
+        <div class="composer-heading"><div>
+          <h2 id="chrome-title">Save from Chrome</h2>
+          <p>Drag the link below to Chrome's bookmarks bar. On any website, click it to open this form with the page URL and title filled in.</p>
+          <p><a id="chrome-bookmarklet" href="#">Save to Bookmark Studio</a></p>
+          <small>Show Chrome's bookmarks bar with Ctrl+Shift+B (Windows) or Cmd+Shift+B (Mac). The bookmarklet works on regular websites, not Chrome internal pages.</small>
+        </div></div>
+      </section>
+      <section class="composer" aria-labelledby="composer-title">
+        <div class="composer-heading">
+          <span class="section-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="m10.5 13.5 3-3m-5 6-1.25 1.25a3.18 3.18 0 0 1-4.5-4.5L6 10m9.5-2.5 1.25-1.25a3.18 3.18 0 1 1 4.5 4.5L18 14m-9-2 6 0" /></svg>
+          </span>
+          <div>
+            <h2 id="composer-title">New link</h2>
+            <p>Paste a URL and add your own context.</p>
+          </div>
+        </div>
+
+        <form id="bookmark-form">
+          <div class="url-row">
+            <label class="sr-only" for="url">Link address</label>
+            <div class="input-with-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a3.5 3.5 0 0 0 5 0l3-3a3.54 3.54 0 0 0-5-5l-1 1m2 3a3.5 3.5 0 0 0-5 0l-3 3a3.54 3.54 0 0 0 5 5l1-1" /></svg>
+              <input id="url" name="url" type="url" placeholder="https://example.com/interesting-article" required />
+            </div>
+            <button class="secondary-button" type="button" id="preview-button">Create preview</button>
+          </div>
+
+          <div class="preview-panel is-hidden" id="preview-panel" aria-live="polite">
+            <div class="preview-cover" id="preview-cover"><span>Link preview</span></div>
+            <div>
+              <span class="preview-label">LINK PREVIEW</span>
+              <strong id="preview-domain">example.com</strong>
+              <p id="preview-copy">Review the card and edit its details below.</p>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <label>
+              <span>Title <b>*</b></span>
+              <input id="title" name="title" type="text" placeholder="What is this link about?" required />
+            </label>
+            <label>
+              <span>Cover image <em>optional</em></span>
+              <input id="cover" name="cover" type="url" placeholder="https://…/image.jpg" />
+            </label>
+            <label class="full-width">
+              <span>Short description</span>
+              <textarea id="description" name="description" rows="2" placeholder="Briefly describe this content"></textarea>
+            </label>
+            <label class="full-width">
+              <span>Note</span>
+              <textarea id="note" name="note" rows="3" placeholder="Why are you saving this? What should you remember?"></textarea>
+              <small>This note is visible to everyone viewing the bookmark.</small>
+            </label>
+            <label class="full-width">
+              <span>Tags</span>
+              <input id="tags" name="tags" type="text" placeholder="travel, design, inspiration" />
+              <small>Separate tags with commas.</small>
+            </label>
+            <label class="full-width">
+              <span>Category</span>
+              <select id="category" name="category">
+                <option value="">Uncategorized</option>
+                </select>
+              <small>Choose a category for this bookmark.</small>
+              </label>
+          </div>
+
+          <div class="form-footer">
+            <p id="form-message" role="status"></p>
+            <button class="secondary-button" type="button" id="cancel-edit" hidden>Cancel editing</button>
+            <button class="primary-button" type="submit" id="save-bookmark-button">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.75A1.75 1.75 0 0 1 8.75 3h6.5A1.75 1.75 0 0 1 17 4.75V21l-5-3.25L7 21V4.75Z" /></svg>
+              Save bookmark
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section class="library" aria-labelledby="library-title">
+        <div class="library-heading">
+          <div>
+            <h2 id="library-title">Library</h2>
+            <p><span id="bookmark-count">0</span> <span id="bookmark-word">bookmarks</span> in your collection</p>
+          </div>
+          <span class="sort-label">Newest first</span>
+        </div>
+        <div class="category-toolbar">
+          <div id="category-filters" class="category-filters"></div>
+          <button id="new-category-button" class="secondary-button" type="button" hidden>
+            + New category
+          </button>
+        </div>
+        <div class="bookmark-grid" id="bookmark-list"></div>
+      </section>
+    </main>
+
+    <template id="bookmark-template">
+      <article class="bookmark-card">
+        <div class="card-cover">
+          <img alt="" />
+          <div class="cover-fallback"><span>BS</span></div>
+          <span class="example-badge">Example</span>
+        </div>
+        <div class="card-body">
+          <span class="card-domain"></span>
+          <h3></h3>
+          <p class="card-description"></p>
+          <div class="card-note">
+            <span aria-hidden="true">“</span>
+            <p></p>
+          </div>
+          <div class="tag-list"></div>
+          <a class="source-link" target="_blank" rel="noopener noreferrer">
+            Open source
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 5h5v5m0-5-9 9m7-2v6a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h6" /></svg>
+          </a>
+          <div class="card-actions">
+          <button class="edit-bookmark" type="button">Edit</button>
+          <button class="delete-bookmark" type="button" aria-label="Delete bookmark">Delete bookmark</button>
+          </div>
+        </div>
+      </article>
+    </template>
+
+    <script src="https://accounts.google.com/gsi/client"></script>
+    <script src="config.js?v=20261117-2"></script>
+    <script src="app.js?v=20261118-3"></script>
+    <script src="bookmarklet.js"></script>
+  </body>
+</html>
