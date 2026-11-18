@@ -25,7 +25,8 @@
         </span>
         <span>Bookmark <strong>Studio</strong></span>
       </a>
-      <div id="google-signin"></div><button id="signout-button" type="button" hidden>Sign out</button>
+      <div id="google-signin" aria-label="Sign in with Google"></div>
+      <button id="signout-button" type="button" hidden>Sign out</button>
       <span class="privacy-pill">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 10V7a4.5 4.5 0 0 1 9 0v3m-10 0h11a1 1 0 0 1 1 1v9h-13v-9a1 1 0 0 1 1-1Z" /></svg>
         Public library
@@ -83,35 +84,35 @@
           </div>
 
           <div class="form-grid">
-            <label>
+            <label for="title">
               <span>Title <b>*</b></span>
               <input id="title" name="title" type="text" placeholder="What is this link about?" required />
             </label>
-            <label>
+            <label for="cover">
               <span>Cover image <em>optional</em></span>
               <input id="cover" name="cover" type="url" placeholder="https://…/image.jpg" />
             </label>
-            <label class="full-width">
+            <label class="full-width" for="description">
               <span>Short description</span>
               <textarea id="description" name="description" rows="2" placeholder="Briefly describe this content"></textarea>
             </label>
-            <label class="full-width">
+            <label class="full-width" for="note">
               <span>Note</span>
               <textarea id="note" name="note" rows="3" placeholder="Why are you saving this? What should you remember?"></textarea>
               <small>This note is visible to everyone viewing the bookmark.</small>
             </label>
-            <label class="full-width">
+            <label class="full-width" for="tags">
               <span>Tags</span>
               <input id="tags" name="tags" type="text" placeholder="travel, design, inspiration" />
               <small>Separate tags with commas.</small>
             </label>
-            <label class="full-width">
+            <label class="full-width" for="category">
               <span>Category</span>
               <select id="category" name="category">
                 <option value="">Uncategorized</option>
-                </select>
+              </select>
               <small>Choose a category for this bookmark.</small>
-              </label>
+            </label>
           </div>
 
           <div class="form-footer">
@@ -134,7 +135,7 @@
           <span class="sort-label">Newest first</span>
         </div>
         <div class="category-toolbar">
-          <div id="category-filters" class="category-filters"></div>
+          <div id="category-filters" class="category-filters" role="group" aria-label="Filter bookmarks by category"></div>
           <button id="new-category-button" class="secondary-button" type="button" hidden>
             + New category
           </button>
@@ -164,8 +165,8 @@
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 5h5v5m0-5-9 9m7-2v6a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h6" /></svg>
           </a>
           <div class="card-actions">
-          <button class="edit-bookmark" type="button">Edit</button>
-          <button class="delete-bookmark" type="button" aria-label="Delete bookmark">Delete bookmark</button>
+            <button class="edit-bookmark" type="button">Edit</button>
+            <button class="delete-bookmark" type="button" aria-label="Delete bookmark">Delete bookmark</button>
           </div>
         </div>
       </article>
@@ -173,7 +174,7 @@
 
     <script src="https://accounts.google.com/gsi/client"></script>
     <script src="config.js?v=20261118-node-api"></script>
-    <script src="app.js?v=20261118-3"></script>
+    <script src="app.js" type="module"></script>
     <script src="bookmarklet.js"></script>
   </body>
 </html>
