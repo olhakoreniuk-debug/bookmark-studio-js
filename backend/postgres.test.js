@@ -1,16 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-
-import { PostgresBookmarkStore, validateBookmark } from "./server.js";
+import { PostgresBookmarkStore } from "./postgres.js";
+import { validateBookmark } from "./validation.js";
 
 test("PostgreSQL initialization creates the dedicated bookmarks_js table", async () => {
   const executed = [];
-  const pool = {
-    async query(sql) {
-      executed.push(sql);
-      return { rows: [], rowCount: 0 };
-    },
-  };
+  const pool = { async query(sql) { executed.push(sql); return { rows: [], rowCount: 0 }; } };
   const store = new PostgresBookmarkStore(pool);
   await store.initialize();
   assert.equal(executed.length, 2);
@@ -20,21 +15,15 @@ test("PostgreSQL initialization creates the dedicated bookmarks_js table", async
 });
 
 test("PostgreSQL reads records with correct JSON tags and timestamps", async () => {
-  const pool = {
-    async query(sql) {
-      assert.match(sql, /FROM bookmarks_js ORDER BY created_at DESC/);
-      return {
-        rows: [{
-          id: "saved", url: "https://example.com", title: "Saved",
-          description: "Description", cover: "", note: "Note",
-          tags: ["one", "two"], created_at: "1700000000000",
-          category: "TECH",
-        }],
-      };
-    },
-  };
-  const store = new PostgresBookmarkStore(pool);
-  const data = await store.list();
+  const pool = { async query(sql) {
+    assert.match(sql, /FROM bookmarks_js ORDER BY created_at DESC/);
+    return { rows: [{
+      id: "saved", url: "https://example.com", title: "Saved",
+      description: "Description", cover: "", note: "Note",
+      tags: ["one", "two"], created_at: "1700000000000", category: "TECH",
+    }] };
+  } };
+  const data = await new PostgresBookmarkStore(pool).list();
   assert.equal(data.length, 1);
   assert.equal(data[0].createdAt, 1700000000000);
   assert.deepEqual(data[0].tags, ["one", "two"]);
@@ -43,17 +32,10 @@ test("PostgreSQL reads records with correct JSON tags and timestamps", async () 
 
 test("PostgreSQL upsert uses parameterized SQL and serializes tags", async () => {
   const executed = [];
-  const pool = {
-    async query(sql, params) {
-      executed.push({ sql, params });
-      return { rowCount: 1 };
-    },
-  };
+  const pool = { async query(sql, params) { executed.push({ sql, params }); return { rowCount: 1 }; } };
   const store = new PostgresBookmarkStore(pool);
-  const bookmark = validateBookmark({
-    id: "one", url: "https://example.com", title: "Hello",
-    tags: ["work", "tech"], category: "WORK", createdAt: 1700000000000,
-  });
+  const bookmark = validateBookmark({ id: "one", url: "https://example.com", title: "Hello",
+    tags: ["work", "tech"], category: "WORK", createdAt: 1700000000000 });
   const result = await store.upsert(bookmark);
   assert.deepEqual(result, bookmark);
   assert.equal(executed.length, 1);
@@ -65,25 +47,20 @@ test("PostgreSQL upsert uses parameterized SQL and serializes tags", async () =>
 });
 
 test("PostgreSQL DELETE is parameterized and reports whether a row existed", async () => {
-  const pool = {
-    async query(sql, params) {
-      assert.match(sql, /^DELETE FROM bookmarks_js WHERE id = \$1$/);
-      assert.equal(params.length, 1);
-      return { rowCount: params[0] === "exists" ? 1 : 0 };
-    },
-  };
+  const pool = { async query(sql, params) {
+    assert.match(sql, /^DELETE FROM bookmarks_js WHERE id = \$1$/);
+    assert.equal(params.length, 1);
+    return { rowCount: params[0] === "exists" ? 1 : 0 };
+  } };
   const store = new PostgresBookmarkStore(pool);
   assert.equal(await store.delete("exists"), true);
   assert.equal(await store.delete("missing"), false);
 });
 
 test("PostgreSQL health executes a simple read-only query", async () => {
-  const pool = {
-    async query(sql) {
-      assert.equal(sql, "SELECT 1");
-      return { rows: [{ "?column?": 1 }] };
-    },
-  };
-  const store = new PostgresBookmarkStore(pool);
-  await store.health();
+  const pool = { async query(sql) {
+    assert.equal(sql, "SELECT 1");
+    return { rows: [{ "?column?": 1 }] };
+  } };
+  await new PostgresBookmarkStore(pool).health();
 });

@@ -2,28 +2,19 @@ import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { once } from "node:events";
 import test from "node:test";
-
-import { createApp, validateBookmark } from "./server.js";
+import { createApp } from "./api.js";
+import { validateBookmark } from "./validation.js";
 
 const OWNER_TOKEN = "Bearer local-test-owner";
-
 function fakeStore() {
   const records = new Map();
   return {
     async health() {},
-    async list() {
-      return [...records.values()].sort((a, b) => b.createdAt - a.createdAt);
-    },
-    async upsert(bookmark) {
-      records.set(bookmark.id, bookmark);
-      return bookmark;
-    },
-    async delete(id) {
-      return records.delete(id);
-    },
+    async list() { return [...records.values()].sort((a, b) => b.createdAt - a.createdAt); },
+    async upsert(bookmark) { records.set(bookmark.id, bookmark); return bookmark; },
+    async delete(id) { return records.delete(id); },
   };
 }
-
 async function startTestApi(t) {
   const store = fakeStore();
   const server = createServer(createApp({
@@ -34,16 +25,10 @@ async function startTestApi(t) {
   await once(server, "listening");
   t.after(async () => {
     server.closeAllConnections();
-    await new Promise((resolve, reject) => {
-      server.close((error) => error ? reject(error) : resolve());
-    });
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
   });
-  return {
-    store,
-    url: `http://127.0.0.1:${server.address().port}`,
-  };
+  return { store, url: `http://127.0.0.1:${server.address().port}` };
 }
-
 async function jsonRequest(url, route, { method = "GET", token = null, body, headers = {} } = {}) {
   const response = await fetch(url + route, {
     method,
@@ -57,18 +42,11 @@ async function jsonRequest(url, route, { method = "GET", token = null, body, hea
   const data = response.status === 204 ? null : await response.json();
   return { response, data };
 }
-
 function example(id = "test-1") {
   return {
-    id,
-    url: "https://example.com/article",
-    title: "An example",
-    description: "Useful article",
-    note: "Remember this",
-    cover: "",
-    category: "TECH",
-    tags: ["node", "tests"],
-    createdAt: 1700000000000,
+    id, url: "https://example.com/article", title: "An example",
+    description: "Useful article", note: "Remember this", cover: "",
+    category: "TECH", tags: ["node", "tests"], createdAt: 1700000000000,
   };
 }
 
@@ -96,10 +74,8 @@ test("GET /api/bookmarks lists newest first", async (t) => {
 
 test("GET /api/me requires owner authorization", async (t) => {
   const { url } = await startTestApi(t);
-  const anonymous = await jsonRequest(url, "/api/me");
-  assert.equal(anonymous.response.status, 401);
-  const visitor = await jsonRequest(url, "/api/me", { token: "Bearer wrong-user" });
-  assert.equal(visitor.response.status, 401);
+  assert.equal((await jsonRequest(url, "/api/me")).response.status, 401);
+  assert.equal((await jsonRequest(url, "/api/me", { token: "Bearer wrong-user" })).response.status, 401);
   const owner = await jsonRequest(url, "/api/me", { token: OWNER_TOKEN });
   assert.equal(owner.response.status, 200);
   assert.deepEqual(owner.data, { authorized: true });
@@ -108,10 +84,9 @@ test("GET /api/me requires owner authorization", async (t) => {
 test("POST /api/bookmarks blocks anonymous and invalid tokens", async (t) => {
   const { url } = await startTestApi(t);
   for (const token of [null, "Bearer wrong-user"]) {
-    const { response } = await jsonRequest(url, "/api/bookmarks", {
+    assert.equal((await jsonRequest(url, "/api/bookmarks", {
       method: "POST", token, body: example(),
-    });
-    assert.equal(response.status, 401);
+    })).response.status, 401);
   }
   assert.deepEqual((await jsonRequest(url, "/api/bookmarks")).data, []);
 });
@@ -131,14 +106,11 @@ test("POST /api/bookmarks saves a valid bookmark for owner", async (t) => {
 
 test("POST with the same id updates an existing bookmark", async (t) => {
   const { url } = await startTestApi(t);
-  await jsonRequest(url, "/api/bookmarks", {
-    method: "POST", token: OWNER_TOKEN, body: example(),
+  await jsonRequest(url, "/api/bookmarks", { method: "POST", token: OWNER_TOKEN, body: example() });
+  const updated = await jsonRequest(url, "/api/bookmarks", {
+    method: "POST", token: OWNER_TOKEN, body: { ...example(), title: "Edited title", note: "Edited note" },
   });
-  const update = await jsonRequest(url, "/api/bookmarks", {
-    method: "POST", token: OWNER_TOKEN,
-    body: { ...example(), title: "Edited title", note: "Edited note" },
-  });
-  assert.equal(update.response.status, 201);
+  assert.equal(updated.response.status, 201);
   const bookmarks = (await jsonRequest(url, "/api/bookmarks")).data;
   assert.equal(bookmarks.length, 1);
   assert.equal(bookmarks[0].title, "Edited title");
@@ -147,14 +119,13 @@ test("POST with the same id updates an existing bookmark", async (t) => {
 
 test("POST validates URL, title and tags", async (t) => {
   const { url } = await startTestApi(t);
-  const invalid = [
+  for (const body of [
     { ...example(), url: "javascript:alert(1)" },
     { ...example(), url: "not-a-url" },
     { ...example(), title: "   " },
     { ...example(), tags: "not an array" },
     { ...example(), createdAt: "not-a-number" },
-  ];
-  for (const body of invalid) {
+  ]) {
     const { response, data } = await jsonRequest(url, "/api/bookmarks", {
       method: "POST", token: OWNER_TOKEN, body,
     });
@@ -167,8 +138,7 @@ test("POST validates URL, title and tags", async (t) => {
 test("POST with malformed JSON returns 400", async (t) => {
   const { url } = await startTestApi(t);
   const response = await fetch(url + "/api/bookmarks", {
-    method: "POST",
-    headers: { Authorization: OWNER_TOKEN, "Content-Type": "application/json" },
+    method: "POST", headers: { Authorization: OWNER_TOKEN, "Content-Type": "application/json" },
     body: "{broken JSON",
   });
   assert.equal(response.status, 400);
@@ -179,11 +149,8 @@ test("DELETE requires owner and removes only selected bookmark", async (t) => {
   const { url, store } = await startTestApi(t);
   await store.upsert(validateBookmark(example("one")));
   await store.upsert(validateBookmark(example("two")));
-  const denied = await jsonRequest(url, "/api/bookmarks/one", { method: "DELETE" });
-  assert.equal(denied.response.status, 401);
-  const removed = await jsonRequest(url, "/api/bookmarks/one", {
-    method: "DELETE", token: OWNER_TOKEN,
-  });
+  assert.equal((await jsonRequest(url, "/api/bookmarks/one", { method: "DELETE" })).response.status, 401);
+  const removed = await jsonRequest(url, "/api/bookmarks/one", { method: "DELETE", token: OWNER_TOKEN });
   assert.equal(removed.response.status, 200);
   assert.deepEqual(removed.data, { deleted: true, id: "one" });
   assert.deepEqual((await jsonRequest(url, "/api/bookmarks")).data.map((b) => b.id), ["two"]);
@@ -191,10 +158,9 @@ test("DELETE requires owner and removes only selected bookmark", async (t) => {
 
 test("DELETE returns 404 for an unknown bookmark", async (t) => {
   const { url } = await startTestApi(t);
-  const { response } = await jsonRequest(url, "/api/bookmarks/missing", {
+  assert.equal((await jsonRequest(url, "/api/bookmarks/missing", {
     method: "DELETE", token: OWNER_TOKEN,
-  });
-  assert.equal(response.status, 404);
+  })).response.status, 404);
 });
 
 test("unknown API endpoint returns JSON 404", async (t) => {
@@ -208,10 +174,7 @@ test("OPTIONS preflight returns CORS headers for allowed local origin", async (t
   const { url } = await startTestApi(t);
   const response = await fetch(url + "/api/bookmarks", {
     method: "OPTIONS",
-    headers: {
-      Origin: "http://localhost:8080",
-      "Access-Control-Request-Method": "POST",
-    },
+    headers: { Origin: "http://localhost:8080", "Access-Control-Request-Method": "POST" },
   });
   assert.equal(response.status, 204);
   assert.equal(response.headers.get("access-control-allow-origin"), "http://localhost:8080");
@@ -229,10 +192,8 @@ test("CORS does not approve unknown origins", async (t) => {
 
 test("validateBookmark trims fields and normalizes tags", () => {
   const result = validateBookmark({
-    url: " https://example.com/ ",
-    title: " Example ",
-    tags: [" tag ", "", "music"],
-    category: " WORK ",
+    url: " https://example.com/ ", title: " Example ",
+    tags: [" tag ", "", "music"], category: " WORK ",
   });
   assert.equal(result.url, "https://example.com/");
   assert.equal(result.title, "Example");
