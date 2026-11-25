@@ -10,18 +10,32 @@ function safeWebUrl(value) {
 }
 
 function renderBookmark(bookmark) {
+  const category = document.querySelector("#shared-category");
+  category.textContent = bookmark.category || "";
+  category.hidden = !bookmark.category;
   document.querySelector("#shared-title").textContent = bookmark.title;
   document.querySelector("#shared-description").textContent = bookmark.description;
   document.querySelector("#shared-note").textContent = bookmark.note;
   document.querySelector(".card-note").hidden = !bookmark.note;
 
+  const tags = document.querySelector(".tag-list");
+  for (const tag of bookmark.tags || []) {
+    const label = document.createElement("span");
+    label.className = "tag";
+    label.textContent = `# ${tag}`;
+    tags.append(label);
+  }
+
   const source = safeWebUrl(bookmark.url);
   const link = document.querySelector(".source-link");
   if (source) {
     link.href = source;
+    link.textContent = bookmark.url;
     link.hidden = false;
   }
-  const cover = safeWebUrl(bookmark.cover);
+  const cover = /^data:image\/(?:png|jpeg|gif|webp|avif);base64,[a-z0-9+/=]+$/i.test(bookmark.cover)
+    ? bookmark.cover
+    : safeWebUrl(bookmark.cover);
   const image = document.querySelector("#shared-cover");
   if (cover) {
     image.addEventListener("error", () => { image.hidden = true; }, { once: true });
