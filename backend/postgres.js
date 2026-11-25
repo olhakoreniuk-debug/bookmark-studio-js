@@ -69,6 +69,23 @@ export class PostgresBookmarkStore {
     return result.rowCount > 0;
   }
 
+  async share(id, candidate) {
+    const { rows } = await this.pool.query(
+      `UPDATE bookmarks_js SET share_token = COALESCE(share_token, $2)
+       WHERE id = $1 RETURNING share_token`,
+      [id, candidate],
+    );
+    return rows[0]?.share_token;
+  }
+
+  async findShared(token) {
+    const { rows } = await this.pool.query(
+      "SELECT title, description, cover, url, note FROM bookmarks_js WHERE share_token = $1",
+      [token],
+    );
+    return rows[0];
+  }
+
   async health() {
     await this.pool.query("SELECT 1");
   }

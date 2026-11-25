@@ -4,6 +4,7 @@ export function sendJson(response, status, payload, origin) {
   const body = status === 204 ? "" : JSON.stringify(payload);
   response.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
+    "Cache-Control": "no-store",
     "Content-Length": Buffer.byteLength(body),
     ...(origin && config.allowedOrigins.has(origin)
       ? { "Access-Control-Allow-Origin": origin, Vary: "Origin" }

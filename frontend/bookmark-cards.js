@@ -19,7 +19,7 @@ function domainFromUrl(url) {
   }
 }
 
-function createCard(bookmark, { signedIn, onEdit, onDelete }) {
+function createCard(bookmark, { signedIn, onEdit, onDelete, onShare }) {
   const card = document.querySelector("#bookmark-template").content.cloneNode(true);
   const image = card.querySelector("img");
   const fallback = card.querySelector(".cover-fallback");
@@ -51,10 +51,34 @@ function createCard(bookmark, { signedIn, onEdit, onDelete }) {
 
   const edit = card.querySelector(".edit-bookmark");
   const remove = card.querySelector(".delete-bookmark");
-  edit.hidden = remove.hidden = Boolean(bookmark.example) || !signedIn;
-  if (!bookmark.example) {
+  const share = card.querySelector(".share-bookmark");
+  edit.hidden = remove.hidden = share.hidden = Boolean(bookmark.example) || !signedIn;
+  if (!share.hidden) {
     edit.addEventListener("click", () => onEdit(bookmark));
     remove.addEventListener("click", () => onDelete(bookmark, remove));
+    const field = card.querySelector(".share-url");
+    const status = card.querySelector(".share-status");
+    share.addEventListener("click", async () => {
+      share.disabled = true;
+      status.textContent = "Preparing link…";
+      try {
+        field.value = await onShare(bookmark);
+        try {
+          await navigator.clipboard.writeText(field.value);
+          field.hidden = true;
+          status.textContent = "Link copied.";
+        } catch {
+          field.hidden = false;
+          field.focus();
+          field.select();
+          status.textContent = "Copy the selected link manually.";
+        }
+      } catch {
+        status.textContent = "Could not create the share link. Please try again.";
+      } finally {
+        share.disabled = false;
+      }
+    });
   }
   const source = card.querySelector(".source-link");
   source.href = bookmark.url;
@@ -62,12 +86,12 @@ function createCard(bookmark, { signedIn, onEdit, onDelete }) {
   return card;
 }
 
-export function renderBookmarkCards({ bookmarks, show, signedIn, onEdit, onDelete }) {
+export function renderBookmarkCards({ bookmarks, show, signedIn, onEdit, onDelete, onShare }) {
   const all = [...bookmarks].sort((a, b) => b.createdAt - a.createdAt);
   all.push(exampleBookmark);
   const visible = all.filter(show);
   const cards = visible.map((bookmark) => createCard(bookmark, {
-    signedIn, onEdit, onDelete,
+    signedIn, onEdit, onDelete, onShare,
   }));
   document.querySelector("#bookmark-list").replaceChildren(...cards);
   document.querySelector("#bookmark-count").textContent = String(all.length);

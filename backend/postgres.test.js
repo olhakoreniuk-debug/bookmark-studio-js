@@ -3,6 +3,22 @@ import test from "node:test";
 import { PostgresBookmarkStore } from "./postgres.js";
 import { validateBookmark } from "./validation.js";
 
+test("PostgreSQL share preserves an existing token and reads only public fields", async () => {
+  const queries = [];
+  const publicFields = { title: "Shared", description: "", cover: "", url: "https://example.com", note: "Note" };
+  const pool = { async query(sql, values) {
+    queries.push({ sql, values });
+    return { rows: sql.startsWith("UPDATE") ? [{ share_token: "existing" }] : [publicFields] };
+  } };
+  const store = new PostgresBookmarkStore(pool);
+  assert.equal(await store.share("bookmark-id", "candidate"), "existing");
+  assert.match(queries[0].sql, /COALESCE\(share_token, \$2\)/);
+  assert.deepEqual(queries[0].values, ["bookmark-id", "candidate"]);
+  assert.deepEqual(await store.findShared("existing"), publicFields);
+  assert.match(queries[1].sql, /SELECT title, description, cover, url, note FROM/);
+  assert.deepEqual(queries[1].values, ["existing"]);
+});
+
 test("PostgreSQL initialization creates the dedicated bookmarks_js table", async () => {
   const executed = [];
   const pool = { async query(sql) { executed.push(sql); return { rows: [], rowCount: 0 }; } };

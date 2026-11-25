@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <meta name="referrer" content="no-referrer" />
+  <title>Shared bookmark · Bookmark Studio</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main class="shared-page">
+    <p id="share-status" role="status">Loading shared bookmark…</p>
+    <article class="bookmark-card" hidden>
+      <img id="shared-cover" alt="" hidden />
+      <div class="card-body">
+        <h1 id="shared-title"></h1>
+        <p id="shared-description"></p>
+        <section class="card-note" hidden>
+          <h2>Notes</h2>
+          <p id="shared-note"></p>
+        </section>
+        <a class="source-link" target="_blank" rel="noopener noreferrer" hidden>Open original source</a>
+      </div>
+    </article>
+  </main>
+  <script src="./config.js"></script>
+  <script type="module" src="./share.js"></script>
+</body>
+</html>

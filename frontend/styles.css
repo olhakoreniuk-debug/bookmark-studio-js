@@ -160,6 +160,11 @@ input::placeholder, textarea::placeholder { color: #9ba39c; }
 
 .card-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
 .card-actions .delete-bookmark { margin-top: 0; }
+.share-url { width: 100%; min-width: 0; }
+.shared-page { max-width: 720px; overflow-wrap: anywhere; }
+.shared-page img { width: 100%; max-height: 440px; object-fit: contain; }
+.shared-page .source-link[hidden] { display: none; }
+.shared-page .card-note p { white-space: pre-wrap; }
 .edit-bookmark { padding: 9px 12px; border: 1px solid #b7d5c2; border-radius: 8px; background: var(--green-soft); color: var(--green); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
 .edit-bookmark:hover { background: #dceae1; }
 .edit-bookmark[hidden], #cancel-edit[hidden] { display: none; }
