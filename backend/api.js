@@ -28,8 +28,8 @@ async function handleRoute(request, pathname, store, reply) {
     const token = pathname.slice("/api/shared/".length);
     const bookmark = /^[a-f0-9]{64}$/.test(token) && await store.findShared(token);
     if (!bookmark) return reply(404, { error: "Shared bookmark not found." });
-    const { title, description, cover, url, note } = bookmark;
-    return reply(200, { title, description, cover, url, note });
+    const { title, description, cover, url, note, tags = [], category = "" } = bookmark;
+    return reply(200, { title, description, cover, url, note, tags, category });
   }
   if (request.method === "GET" && pathname === "/api/me") {
     return reply(200, { authorized: true });

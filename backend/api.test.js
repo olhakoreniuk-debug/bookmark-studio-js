@@ -219,7 +219,8 @@ test("Share is owner-only, public by token, stable across edits and invalid afte
   assert.equal(shared.response.status, 200);
   assert.equal(shared.response.headers.get("cache-control"), "no-store");
   assert.deepEqual(shared.data, {
-    title: body.title, description: body.description, cover: body.cover, url: body.url, note: body.note,
+    title: body.title, description: body.description, cover: body.cover,
+    url: body.url, note: body.note, tags: body.tags, category: body.category,
   });
   assert.equal((await jsonRequest(url, "/api/shared/invalid")).response.status, 404);
   assert.equal((await jsonRequest(url, publicRoute, { method: "DELETE" })).response.status, 404);

@@ -80,7 +80,7 @@ export class PostgresBookmarkStore {
 
   async findShared(token) {
     const { rows } = await this.pool.query(
-      "SELECT title, description, cover, url, note FROM bookmarks_js WHERE share_token = $1",
+      "SELECT title, description, cover, url, note, tags, category FROM bookmarks_js WHERE share_token = $1",
       [token],
     );
     return rows[0];

@@ -6,20 +6,23 @@
   <meta name="robots" content="noindex" />
   <meta name="referrer" content="no-referrer" />
   <title>Shared bookmark · Bookmark Studio</title>
-  <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./styles.css?v=share-layout-1" />
 </head>
 <body>
   <main class="shared-page">
+    <a class="shared-home" href="./">← Bookmark Studio</a>
     <p id="share-status" role="status">Loading shared bookmark…</p>
     <article class="bookmark-card" hidden>
       <img id="shared-cover" alt="" hidden />
       <div class="card-body">
+        <p id="shared-category" class="card-domain" hidden></p>
         <h1 id="shared-title"></h1>
         <p id="shared-description"></p>
         <section class="card-note" hidden>
           <h2>Notes</h2>
           <p id="shared-note"></p>
         </section>
+        <div class="tag-list" aria-label="Tags"></div>
         <a class="source-link" target="_blank" rel="noopener noreferrer" hidden>Open original source</a>
       </div>
     </article>
