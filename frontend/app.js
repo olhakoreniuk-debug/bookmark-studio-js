@@ -42,6 +42,5 @@ auth = createAuthentication({
 form.initialize();
 auth.initialize();
 bookmarks.load().catch((error) => {
-  console.error("Could not load public bookmarks:", error);
   form.setMessage("Could not load bookmarks: " + error.message);
 });

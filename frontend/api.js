@@ -20,13 +20,17 @@ export function createApiClient({
     });
     const payload = response.status === 204 ? null : await response.json();
     if (!response.ok) {
-      throw new Error(payload?.error || `API request failed (${response.status}).`);
+      throw Object.assign(new Error(payload?.error || `API request failed (${response.status}).`), {
+        status: response.status,
+      });
     }
     return payload;
   }
 
   return {
     getBookmarks: () => request(bookmarksUrl),
+    shareBookmark: (id) => request(`${bookmarksUrl}/${encodeURIComponent(id)}/share`, { method: "POST" }),
+    getSharedBookmark: (token) => request(`${apiRoot}/api/shared/${encodeURIComponent(token)}`),
     saveBookmark: (bookmark) => request(bookmarksUrl, { method: "POST", body: bookmark }),
     deleteBookmark: (id) => request(`${bookmarksUrl}/${encodeURIComponent(id)}`, {
       method: "DELETE",

@@ -1,14 +1,36 @@
+import { randomBytes } from "node:crypto";
 import { config } from "./config.js";
 import { validateBookmark } from "./validation.js";
 import { readJson, sendJson } from "./utils.js";
 
 function requiresOwner(method, pathname) {
   return (method === "GET" && pathname === "/api/me") ||
-    (method === "POST" && pathname === "/api/bookmarks") ||
+    (method === "POST" && (pathname === "/api/bookmarks" || shareAction.test(pathname))) ||
     (method === "DELETE" && pathname.startsWith("/api/bookmarks/"));
 }
 
+const shareAction = /^\/api\/bookmarks\/([^/]+)\/share$/;
+
 async function handleRoute(request, pathname, store, reply) {
+  const share = shareAction.exec(pathname);
+  if (request.method === "POST" && share) {
+    let id;
+    try {
+      id = decodeURIComponent(share[1]);
+    } catch {
+      return reply(400, { error: "Invalid bookmark ID." });
+    }
+    const token = await store.share(id, randomBytes(32).toString("hex"));
+    if (!token) return reply(404, { error: "Bookmark not found" });
+    return reply(200, { token });
+  }
+  if (request.method === "GET" && pathname.startsWith("/api/shared/")) {
+    const token = pathname.slice("/api/shared/".length);
+    const bookmark = /^[a-f0-9]{64}$/.test(token) && await store.findShared(token);
+    if (!bookmark) return reply(404, { error: "Shared bookmark not found." });
+    const { title, description, cover, url, note } = bookmark;
+    return reply(200, { title, description, cover, url, note });
+  }
   if (request.method === "GET" && pathname === "/api/me") {
     return reply(200, { authorized: true });
   }
@@ -16,7 +38,12 @@ async function handleRoute(request, pathname, store, reply) {
     return reply(200, await store.list());
   }
   if (request.method === "POST" && pathname === "/api/bookmarks") {
-    const bookmark = validateBookmark(await readJson(request));
+    let bookmark;
+    try {
+      bookmark = validateBookmark(await readJson(request));
+    } catch (error) {
+      return reply(error.status || 400, { error: error.message });
+    }
     await store.upsert(bookmark);
     return reply(201, bookmark);
   }
@@ -48,7 +75,8 @@ export function createApp({ store, verifyOwner }) {
       return await handleRoute(request, pathname, store, reply);
     } catch (error) {
       console.error(error);
-      return reply(error.status || 400, { error: error.message || "Unexpected error" });
+      const status = error.status || 500;
+      return reply(status, { error: status < 500 ? error.message : "Unexpected server error." });
     }
   };
 }

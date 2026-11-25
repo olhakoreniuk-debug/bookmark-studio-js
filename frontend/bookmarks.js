@@ -1,4 +1,4 @@
-/** Public bookmark collection and owner-only mutations. */
+/** Public bookmark collection and owner-only card actions. */
 import { renderBookmarkCards } from "./bookmark-cards.js";
 
 export function createBookmarks({ api, categories, isSignedIn, onEdit }) {
@@ -11,6 +11,7 @@ export function createBookmarks({ api, categories, isSignedIn, onEdit }) {
       signedIn: isSignedIn(),
       onEdit,
       onDelete: deleteBookmark,
+      onShare: shareBookmark,
     });
   }
 
@@ -18,6 +19,13 @@ export function createBookmarks({ api, categories, isSignedIn, onEdit }) {
     bookmarks = await api.getBookmarks();
     categories.setBookmarks(bookmarks);
     render();
+  }
+
+  async function shareBookmark(bookmark) {
+    const { token } = await api.shareBookmark(bookmark.id);
+    const url = new URL("./share.html", window.location.href);
+    url.searchParams.set("token", token);
+    return url.href;
   }
 
   async function deleteBookmark(bookmark, button) {

@@ -2,6 +2,10 @@ import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { once } from "node:events";
 import test from "node:test";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { JsonBookmarkStore } from "./json-store.js";
 import { createApp } from "./api.js";
 import { validateBookmark } from "./validation.js";
 
@@ -15,8 +19,7 @@ function fakeStore() {
     async delete(id) { return records.delete(id); },
   };
 }
-async function startTestApi(t) {
-  const store = fakeStore();
+async function startTestApi(t, store = fakeStore()) {
   const server = createServer(createApp({
     store,
     verifyOwner: async (authorization) => authorization === OWNER_TOKEN,
@@ -88,7 +91,7 @@ test("POST /api/bookmarks blocks anonymous and invalid tokens", async (t) => {
       method: "POST", token, body: example(),
     })).response.status, 401);
   }
-  assert.deepEqual((await jsonRequest(url, "/api/bookmarks")).data, []);
+  assert.deepEqual((await jsonRequest(url, "/api/bookmarks", { token: OWNER_TOKEN })).data, []);
 });
 
 test("POST /api/bookmarks saves a valid bookmark for owner", async (t) => {
@@ -101,7 +104,7 @@ test("POST /api/bookmarks saves a valid bookmark for owner", async (t) => {
   assert.deepEqual(data.tags, ["node", "tests"]);
   assert.equal(data.category, "TECH");
   assert.equal(data.example, false);
-  assert.equal((await jsonRequest(url, "/api/bookmarks")).data.length, 1);
+  assert.equal((await jsonRequest(url, "/api/bookmarks", { token: OWNER_TOKEN })).data.length, 1);
 });
 
 test("POST with the same id updates an existing bookmark", async (t) => {
@@ -111,7 +114,7 @@ test("POST with the same id updates an existing bookmark", async (t) => {
     method: "POST", token: OWNER_TOKEN, body: { ...example(), title: "Edited title", note: "Edited note" },
   });
   assert.equal(updated.response.status, 201);
-  const bookmarks = (await jsonRequest(url, "/api/bookmarks")).data;
+  const bookmarks = (await jsonRequest(url, "/api/bookmarks", { token: OWNER_TOKEN })).data;
   assert.equal(bookmarks.length, 1);
   assert.equal(bookmarks[0].title, "Edited title");
   assert.equal(bookmarks[0].note, "Edited note");
@@ -132,7 +135,7 @@ test("POST validates URL, title and tags", async (t) => {
     assert.equal(response.status, 400);
     assert.ok(data.error);
   }
-  assert.deepEqual((await jsonRequest(url, "/api/bookmarks")).data, []);
+  assert.deepEqual((await jsonRequest(url, "/api/bookmarks", { token: OWNER_TOKEN })).data, []);
 });
 
 test("POST with malformed JSON returns 400", async (t) => {
@@ -153,7 +156,7 @@ test("DELETE requires owner and removes only selected bookmark", async (t) => {
   const removed = await jsonRequest(url, "/api/bookmarks/one", { method: "DELETE", token: OWNER_TOKEN });
   assert.equal(removed.response.status, 200);
   assert.deepEqual(removed.data, { deleted: true, id: "one" });
-  assert.deepEqual((await jsonRequest(url, "/api/bookmarks")).data.map((b) => b.id), ["two"]);
+  assert.deepEqual((await jsonRequest(url, "/api/bookmarks", { token: OWNER_TOKEN })).data.map((b) => b.id), ["two"]);
 });
 
 test("DELETE returns 404 for an unknown bookmark", async (t) => {
@@ -188,6 +191,47 @@ test("CORS does not approve unknown origins", async (t) => {
   });
   assert.equal(response.status, 200);
   assert.equal(response.headers.get("access-control-allow-origin"), null);
+});
+
+test("Share is owner-only, public by token, stable across edits and invalid after delete", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "bookmark-share-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const store = new JsonBookmarkStore(join(directory, "bookmarks.json"));
+  await store.initialize();
+  const { url } = await startTestApi(t, store);
+  const ownerPost = { method: "POST", token: OWNER_TOKEN };
+  const route = "/api/bookmarks/test-1/share";
+  const body = example();
+  await jsonRequest(url, "/api/bookmarks", { ...ownerPost, body });
+  await store.upsert({ ...validateBookmark(example("private")), id: "a".repeat(64) });
+  assert.equal((await jsonRequest(url, "/api/shared/" + "a".repeat(64))).response.status, 404);
+  assert.equal((await jsonRequest(url, route, { method: "POST" })).response.status, 401);
+  assert.equal((await jsonRequest(url, route, { ...ownerPost, token: "Bearer wrong-user" })).response.status, 401);
+  assert.equal((await jsonRequest(url, "/api/bookmarks/missing/share", ownerPost)).response.status, 404);
+  const [first, second] = await Promise.all([
+    jsonRequest(url, route, ownerPost), jsonRequest(url, route, ownerPost),
+  ]);
+  assert.equal(first.response.status, 200);
+  assert.deepEqual(first.data, second.data);
+  assert.match(first.data.token, /^[a-f0-9]{64}$/);
+  const publicRoute = "/api/shared/" + first.data.token;
+  const shared = await jsonRequest(url, publicRoute);
+  assert.equal(shared.response.status, 200);
+  assert.equal(shared.response.headers.get("cache-control"), "no-store");
+  assert.deepEqual(shared.data, {
+    title: body.title, description: body.description, cover: body.cover, url: body.url, note: body.note,
+  });
+  assert.equal((await jsonRequest(url, "/api/shared/invalid")).response.status, 404);
+  assert.equal((await jsonRequest(url, publicRoute, { method: "DELETE" })).response.status, 404);
+  const collection = await jsonRequest(url, "/api/bookmarks");
+  assert.equal(collection.response.status, 200);
+  assert.ok(collection.data.some((item) => item.id === "a".repeat(64)));
+  assert.ok(collection.data.every((item) => !Object.hasOwn(item, "shareToken")));
+  await jsonRequest(url, "/api/bookmarks", { ...ownerPost, body: { ...body, note: "Updated note" } });
+  assert.equal((await jsonRequest(url, publicRoute)).data.note, "Updated note");
+  assert.deepEqual((await jsonRequest(url, route, ownerPost)).data, first.data);
+  await jsonRequest(url, "/api/bookmarks/test-1", { method: "DELETE", token: OWNER_TOKEN });
+  assert.equal((await jsonRequest(url, publicRoute)).response.status, 404);
 });
 
 test("validateBookmark trims fields and normalizes tags", () => {
